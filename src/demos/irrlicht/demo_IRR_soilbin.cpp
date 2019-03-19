@@ -25,6 +25,7 @@
 #include "chrono/core/ChRealtimeStep.h"
 #include "chrono/geometry/ChTriangleMeshConnected.h"
 #include "chrono/physics/ChBodyEasy.h"
+#include "chrono/physics/ChLinkMotorRotationTorque.h"
 #include "chrono/physics/ChSystemNSC.h"
 
 #include "chrono_irrlicht/ChIrrApp.h"
@@ -74,12 +75,12 @@ class ParticleGenerator {
     ~ParticleGenerator() {}
 
     // return the total # of particles
-    const int nparticles() { return this->totalParticles; }
+    int nparticles() const { return this->totalParticles; }
 
     // return the total particle mass
-    const double particleMass() { return (this->totalParticleMass); }
+    double particleMass() const { return (this->totalParticleMass); }
 
-    const double getMu() { return this->mu; }
+    double getMu() const { return this->mu; }
 
     void setMu(double newMu) {
         if (newMu < 0.0) {
@@ -93,7 +94,7 @@ class ParticleGenerator {
         this->mu = (float)newMu;
     }
 
-    const double getSphDensity() { return this->sphDens; }
+    double getSphDensity() const { return this->sphDens; }
     void setSphDensity(double newDens) {
         if (newDens < 0.0)
             GetLog() << "can't set density less than 0  \n";
@@ -110,7 +111,7 @@ class ParticleGenerator {
 
     // create some spheres with size = pSize + ChRank()*pDev
     // also, you can create boxes too, with the sides being sized in the same sort of manner as the spheres
-    const bool create_some_falling_items(double pSize, double pDev, int nParticles, int nBoxes = 0) {
+    bool create_some_falling_items(double pSize, double pDev, int nParticles, int nBoxes = 0) {
         double minTime_betweenCreate = 0.05;  // this much simulation time MUST elapse before being allowed to
                                               // create more particles
         if ((msys->GetChTime() - this->simTime_lastPcreated) >= minTime_betweenCreate) {
@@ -264,8 +265,8 @@ class SoilbinWheel {
         wheel->SetCollide(true);
 
         // Visualization mesh
-        ChTriangleMeshConnected tireMesh;
-        tireMesh.LoadWavefrontMesh(GetChronoDataFile("tractor_wheel.obj"), true, true);
+        auto tireMesh = std::make_shared<ChTriangleMeshConnected>();
+        tireMesh->LoadWavefrontMesh(GetChronoDataFile("tractor_wheel.obj"), true, true);
         auto tireMesh_asset = std::make_shared<ChTriangleMeshShape>();
         tireMesh_asset->SetMesh(tireMesh);
         wheel->AddAsset(tireMesh_asset);
@@ -308,7 +309,7 @@ class TestMech {
     std::shared_ptr<ChBodyEasyBox> wall3;
     std::shared_ptr<ChBodyEasyBox> wall4;
     std::shared_ptr<ChLinkSpring> spring;
-    std::shared_ptr<ChLinkEngine> torqueDriver;
+    std::shared_ptr<ChLinkMotorRotationTorque> torqueDriver;
     std::shared_ptr<ChLinkLockRevolute> spindle;
 
     // GUI-tweaked data
@@ -389,9 +390,8 @@ class TestMech {
         system->AddLink(spindle);
 
         // create a torque between the truss and wheel
-        torqueDriver = std::make_shared<ChLinkEngine>();
-        torqueDriver->Initialize(truss, wheelBody, ChCoordsys<>(trussCM, chrono::Q_from_AngAxis(CH_C_PI / 2, VECT_Y)));
-        torqueDriver->Set_eng_mode(ChLinkEngine::ENG_MODE_TORQUE);
+        torqueDriver = std::make_shared<ChLinkMotorRotationTorque>();
+        torqueDriver->Initialize(truss, wheelBody, ChFrame<>(trussCM, chrono::Q_from_AngAxis(CH_C_PI / 2, VECT_Y)));
         system->AddLink(torqueDriver);
 
         // ******
@@ -434,8 +434,8 @@ class TestMech {
     // for now, just use the slider value as directly as the torque
     void applyTorque() {
         // note: negative sign is to get Trelleborg tire to spin in the correct direction
-        if (auto mfun = std::dynamic_pointer_cast<ChFunction_Const>(torqueDriver->Get_tor_funct()))
-            mfun->Set_yconst(-this->currTorque);
+        auto mfun = std::static_pointer_cast<ChFunction_Const>(torqueDriver->GetTorqueFunction());
+        mfun->Set_yconst(-this->currTorque);
     }
 
     ~TestMech() {}
@@ -835,12 +835,12 @@ class MyEventReceiver : public IEventReceiver {
     }
 
     // helper functions, these are called in the time step loop
-    const double getCurrentPsize() { return currParticleSize; }
-    const double getCurrentPdev() { return currParticleDev; }
-    const bool createParticles() { return makeParticles; }
+    double getCurrentPsize() const { return currParticleSize; }
+    double getCurrentPdev() const { return currParticleDev; }
+    bool createParticles() const { return makeParticles; }
 
     // try to generate some particles. Returne T/F if anything was created
-    const bool genParticles() {
+    bool genParticles() {
         return mgenerator->create_some_falling_items(currParticleSize, currParticleDev, currNparticlesGen, 0);
     }
 

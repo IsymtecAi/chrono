@@ -35,9 +35,10 @@
 
 #include "chrono/assets/ChPathShape.h"
 #include "chrono/physics/ChBodyEasy.h"
-#include "chrono/utils/ChFilters.h"
 
-#include "chrono/core/ChBezierCurve.h"
+#include "chrono/utils/ChFilters.h"
+#include "chrono/utils/ChUtilsInputOutput.h"
+
 #include "chrono/geometry/ChLineBezier.h"
 #include "chrono/geometry/ChLineSegment.h"
 
@@ -52,6 +53,8 @@ extern "C" {
 
 namespace chrono {
 namespace vehicle {
+
+const std::string CRGTerrain::m_mesh_name = "crg_road";
 
 CRGTerrain::CRGTerrain(ChSystem* system)
     : m_use_vis_mesh(true), m_friction(0.8f), m_dataSetId(0), m_cpId(0), m_isClosed(false) {
@@ -134,6 +137,8 @@ void CRGTerrain::Initialize(const std::string& crg_file) {
     } else {
         m_isClosed = (uIsClosed != 0);
     }
+
+    GenerateMesh();
 
     if (m_use_vis_mesh) {
         SetupMeshGraphics();
@@ -279,17 +284,19 @@ void CRGTerrain::SetupLineGraphics() {
     m_ground->AddAsset(bezier_asset_right);
 }
 
-void CRGTerrain::SetupMeshGraphics() {
-    auto mmesh = std::make_shared<ChTriangleMeshShape>();
+void CRGTerrain::GenerateMesh() {
+    m_mesh = std::make_shared<geometry::ChTriangleMeshConnected>();
+    auto& coords = m_mesh->getCoordsVertices();
+    auto& indices = m_mesh->getIndicesVertexes();
 
-    size_t nu = static_cast<size_t>((m_uend - m_ubeg) / m_uinc) + 1;
-    size_t nv;
+    int nu = static_cast<int>((m_uend - m_ubeg) / m_uinc) + 1;
+    int nv;
 
     std::vector<double> x0, y0, z0;
     // Define the vertices
     if (m_v.size() == 5) {
         // v is nonequidistant, we use m_v[]
-        nv = m_v.size();
+        nv = static_cast<int>(m_v.size());
         for (auto i = 0; i < nu; i++) {
             double u = m_ubeg + m_uinc * double(i);
             for (auto j = 0; j < nv; j++) {
@@ -311,15 +318,15 @@ void CRGTerrain::SetupMeshGraphics() {
                     z0.push_back(z);
                 }
                 if (i == nu - 1 && m_isClosed) {
-                    mmesh->GetMesh().getCoordsVertices().push_back(ChVector<>(x0[j], y0[j], z0[j]));
+                    coords.push_back(ChVector<>(x0[j], y0[j], z0[j]));
                 } else {
-                    mmesh->GetMesh().getCoordsVertices().push_back(ChVector<>(x, y, z));
+                    coords.push_back(ChVector<>(x, y, z));
                 }
             }
         }
     } else {
         // v is equidistant, we use m_vinc
-        nv = static_cast<size_t>((m_vend - m_vbeg) / m_vinc) + 1;
+        nv = static_cast<int>((m_vend - m_vbeg) / m_vinc) + 1;
         for (auto i = 0; i < nu; i++) {
             double u = m_ubeg + m_uinc * double(i);
             for (auto j = 0; j < nv; j++) {
@@ -341,34 +348,43 @@ void CRGTerrain::SetupMeshGraphics() {
                     z0.push_back(z);
                 }
                 if (i == nu - 1 && m_isClosed) {
-                    mmesh->GetMesh().getCoordsVertices().push_back(ChVector<>(x0[j], y0[j], z0[j]));
+                    coords.push_back(ChVector<>(x0[j], y0[j], z0[j]));
                 } else {
-                    mmesh->GetMesh().getCoordsVertices().push_back(ChVector<>(x, y, z));
+                    coords.push_back(ChVector<>(x, y, z));
                 }
             }
         }
     }
 
     // Define the faces
-    for (size_t i = 0; i < nu - 1; i++) {
-        size_t ofs = nv * i;
-        for (size_t j = 0; j < nv - 1; j++) {
-            size_t idx1 = j + ofs;
-            size_t idx2 = j + nv + ofs;
-            size_t idx3 = j + 1 + ofs;
-            size_t jdx1 = j + 1 + ofs;
-            size_t jdx2 = j + nv + ofs;
-            size_t jdx3 = j + 1 + nv + ofs;
-            mmesh->GetMesh().getIndicesVertexes().push_back(ChVector<int>(idx1, idx2, idx3));
-            mmesh->GetMesh().getIndicesVertexes().push_back(ChVector<int>(jdx1, jdx2, jdx3));
+    for (int i = 0; i < nu - 1; i++) {
+        int ofs = nv * i;
+        for (int j = 0; j < nv - 1; j++) {
+            indices.push_back(ChVector<int>(j + ofs, j + nv + ofs, j + 1 + ofs));
+            indices.push_back(ChVector<int>(j + 1 + ofs, j + nv + ofs, j + 1 + nv + ofs));
         }
     }
+}
 
-    auto mfloorcolor = std::make_shared<ChColorAsset>();
-    mfloorcolor->SetColor(ChColor(0.6f, 0.6f, 0.8f));
+void CRGTerrain::SetupMeshGraphics() {
+    auto vmesh = std::make_shared<ChTriangleMeshShape>();
+    vmesh->SetMesh(m_mesh);
+    vmesh->SetName(m_mesh_name);
 
-    m_ground->AddAsset(mfloorcolor);
-    m_ground->AddAsset(mmesh);
+    auto vcolor = std::make_shared<ChColorAsset>();
+    vcolor->SetColor(ChColor(0.6f, 0.6f, 0.8f));
+
+    m_ground->AddAsset(vcolor);
+    m_ground->AddAsset(vmesh);
+}
+
+void CRGTerrain::ExportMeshWavefront(const std::string& out_dir) {
+    std::vector<geometry::ChTriangleMeshConnected> meshes = { *m_mesh };
+    geometry::ChTriangleMeshConnected::WriteWavefront(out_dir + "/" + m_mesh_name + ".obj", meshes);
+}
+
+void CRGTerrain::ExportMeshPovray(const std::string& out_dir) {
+    utils::WriteMeshPovray(*m_mesh, m_mesh_name, out_dir, ChColor(1, 1, 1));
 }
 
 }  // end namespace vehicle

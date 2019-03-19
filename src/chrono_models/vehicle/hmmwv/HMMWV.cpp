@@ -22,6 +22,17 @@
 #include "chrono_vehicle/ChVehicleModelData.h"
 
 #include "chrono_models/vehicle/hmmwv/HMMWV.h"
+#include "chrono_models/vehicle/hmmwv/HMMWV_ANCFTire.h"
+#include "chrono_models/vehicle/hmmwv/HMMWV_FialaTire.h"
+#include "chrono_models/vehicle/hmmwv/HMMWV_LugreTire.h"
+#include "chrono_models/vehicle/hmmwv/HMMWV_Pac02Tire.h"
+#include "chrono_models/vehicle/hmmwv/HMMWV_Pac89Tire.h"
+#include "chrono_models/vehicle/hmmwv/HMMWV_Powertrain.h"
+#include "chrono_models/vehicle/hmmwv/HMMWV_ReissnerTire.h"
+#include "chrono_models/vehicle/hmmwv/HMMWV_RigidTire.h"
+#include "chrono_models/vehicle/hmmwv/HMMWV_SimpleMapPowertrain.h"
+#include "chrono_models/vehicle/hmmwv/HMMWV_SimplePowertrain.h"
+#include "chrono_models/vehicle/hmmwv/HMMWV_TMeasyTire.h"
 
 namespace chrono {
 namespace vehicle {
@@ -39,6 +50,7 @@ HMMWV::HMMWV()
       m_driveType(DrivelineType::AWD),
       m_powertrainType(PowertrainModelType::SHAFTS),
       m_tireType(TireModelType::RIGID),
+      m_tire_collision_type(ChTire::CollisionType::SINGLE_POINT),
       m_vehicle_step_size(-1),
       m_tire_step_size(-1),
       m_initFwdVel(0),
@@ -57,6 +69,7 @@ HMMWV::HMMWV(ChSystem* system)
       m_driveType(DrivelineType::AWD),
       m_powertrainType(PowertrainModelType::SHAFTS),
       m_tireType(TireModelType::RIGID),
+      m_tire_collision_type(ChTire::CollisionType::SINGLE_POINT),
       m_vehicle_step_size(-1),
       m_tire_step_size(-1),
       m_initFwdVel(0),
@@ -118,12 +131,6 @@ void HMMWV::Initialize() {
     }
 
     m_powertrain->Initialize(GetChassisBody(), m_vehicle->GetDriveshaft());
-
-#ifndef CHRONO_FEA
-    // If ANCF tire selected but not available, fall back on rigid tire.
-    if (m_tireType == TireModelType::ANCF)
-        m_tireType = TireModelType::RIGID;
-#endif
 
     // Create the tires and set parameters depending on type.
     switch (m_tireType) {
@@ -213,7 +220,6 @@ void HMMWV::Initialize() {
             break;
         }
         case TireModelType::ANCF: {
-#ifdef CHRONO_FEA
             HMMWV_ANCFTire* tire_FL = new HMMWV_ANCFTire("FL");
             HMMWV_ANCFTire* tire_FR = new HMMWV_ANCFTire("FR");
             HMMWV_ANCFTire* tire_RL = new HMMWV_ANCFTire("RL");
@@ -223,11 +229,9 @@ void HMMWV::Initialize() {
             m_tires[1] = tire_FR;
             m_tires[2] = tire_RL;
             m_tires[3] = tire_RR;
-#endif
             break;
         }
         case TireModelType::REISSNER: {
-#ifdef CHRONO_FEA
             HMMWV_ReissnerTire* tire_FL = new HMMWV_ReissnerTire("FL");
             HMMWV_ReissnerTire* tire_FR = new HMMWV_ReissnerTire("FR");
             HMMWV_ReissnerTire* tire_RL = new HMMWV_ReissnerTire("RL");
@@ -237,7 +241,6 @@ void HMMWV::Initialize() {
             m_tires[1] = tire_FR;
             m_tires[2] = tire_RL;
             m_tires[3] = tire_RR;
-#endif
             break;
         }
         default:
@@ -291,10 +294,10 @@ void HMMWV::Synchronize(double time,
 
     double driveshaft_speed = m_vehicle->GetDriveshaftSpeed();
 
-    m_tires[0]->Synchronize(time, wheel_states[0], terrain);
-    m_tires[1]->Synchronize(time, wheel_states[1], terrain);
-    m_tires[2]->Synchronize(time, wheel_states[2], terrain);
-    m_tires[3]->Synchronize(time, wheel_states[3], terrain);
+    m_tires[0]->Synchronize(time, wheel_states[0], terrain, m_tire_collision_type);
+    m_tires[1]->Synchronize(time, wheel_states[1], terrain, m_tire_collision_type);
+    m_tires[2]->Synchronize(time, wheel_states[2], terrain, m_tire_collision_type);
+    m_tires[3]->Synchronize(time, wheel_states[3], terrain, m_tire_collision_type);
 
     m_powertrain->Synchronize(time, throttle_input, driveshaft_speed);
 

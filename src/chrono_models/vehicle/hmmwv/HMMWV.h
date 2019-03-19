@@ -23,25 +23,12 @@
 #include <array>
 #include <string>
 
-#include "chrono_vehicle/wheeled_vehicle/tire/ChPacejkaTire.h"
+#include "chrono_vehicle/ChPowertrain.h"
+#include "chrono_vehicle/wheeled_vehicle/ChTire.h"
 
 #include "chrono_models/ChApiModels.h"
 #include "chrono_models/vehicle/hmmwv/HMMWV_VehicleFull.h"
 #include "chrono_models/vehicle/hmmwv/HMMWV_VehicleReduced.h"
-#include "chrono_models/vehicle/hmmwv/HMMWV_Powertrain.h"
-#include "chrono_models/vehicle/hmmwv/HMMWV_SimplePowertrain.h"
-#include "chrono_models/vehicle/hmmwv/HMMWV_SimpleMapPowertrain.h"
-#include "chrono_models/vehicle/hmmwv/HMMWV_FialaTire.h"
-#include "chrono_models/vehicle/hmmwv/HMMWV_LugreTire.h"
-#include "chrono_models/vehicle/hmmwv/HMMWV_RigidTire.h"
-#include "chrono_models/vehicle/hmmwv/HMMWV_Pac89Tire.h"
-#include "chrono_models/vehicle/hmmwv/HMMWV_Pac02Tire.h"
-#include "chrono_models/vehicle/hmmwv/HMMWV_TMeasyTire.h"
-
-#ifdef CHRONO_FEA
-#include "chrono_models/vehicle/hmmwv/HMMWV_ANCFTire.h"
-#include "chrono_models/vehicle/hmmwv/HMMWV_ReissnerTire.h"
-#endif
 
 namespace chrono {
 namespace vehicle {
@@ -70,6 +57,8 @@ class CH_MODELS_API HMMWV {
     void SetPowertrainType(PowertrainModelType val) { m_powertrainType = val; }
     void SetTireType(TireModelType val) { m_tireType = val; }
 
+    void SetTireCollisionType(ChTire::CollisionType collision_type) { m_tire_collision_type = collision_type; }
+
     void SetInitPosition(const ChCoordsys<>& pos) { m_initPos = pos; }
     void SetInitFwdVel(double fwdVel) { m_initFwdVel = fwdVel; }
     void SetInitWheelAngVel(const std::vector<double>& omega) { m_initOmega = omega; }
@@ -86,6 +75,9 @@ class CH_MODELS_API HMMWV {
     double GetTotalMass() const;
 
     void Initialize();
+
+    void LockAxleDifferential(int axle, bool lock) { m_vehicle->LockAxleDifferential(axle, lock); }
+    void LockCentralDifferential(int which, bool lock) { m_vehicle->LockCentralDifferential(which, lock); }
 
     void SetAerodynamicDrag(double Cd, double area, double air_density);
 
@@ -117,6 +109,7 @@ class CH_MODELS_API HMMWV {
     DrivelineType m_driveType;
     PowertrainModelType m_powertrainType;
     TireModelType m_tireType;
+    ChTire::CollisionType m_tire_collision_type;
 
     double m_vehicle_step_size;
     double m_tire_step_size;

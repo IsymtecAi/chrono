@@ -17,10 +17,11 @@
 // =============================================================================
 
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <fstream>
 
-#include "chrono/physics/ChLinkMasked.h"
+#include "chrono/physics/ChLinkLock.h"
 #include "chrono/physics/ChLinkUniversal.h"
 
 #include "chrono_vehicle/output/ChVehicleOutputHDF5.h"
@@ -304,8 +305,6 @@ ChVehicleOutputHDF5::~ChVehicleOutputHDF5() {
     delete m_couple_type;
     delete m_linspring_type;
     delete m_rotspring_type;
-
-    GetLog() << "Closing output HDF5 file.\n";
 }
 
 // -----------------------------------------------------------------------------

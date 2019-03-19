@@ -39,6 +39,10 @@ if(NOT MKL_LIBRARIES)
   set(MKL_ROOT "" CACHE PATH "Location of MKL installation")
 endif()
 
+# Make required libraries visible from outside current directory
+set(CH_MKL_LIBRARIES ${MKL_LIBRARIES} ${IOMP5_LIBRARY})
+SET(CH_MKL_LIBRARIES "${CH_MKL_LIBRARIES}" PARENT_SCOPE)
+
 # ------------------------------------------------------------------------------
 # Set up linking line for Intel OpenMP library
 # ------------------------------------------------------------------------------
@@ -97,8 +101,8 @@ TARGET_LINK_LIBRARIES(ChronoEngine_mkl
 
 INSTALL(TARGETS ChronoEngine_mkl
         RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib64
-        ARCHIVE DESTINATION lib64)
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib)
 
 INSTALL(FILES ${ChronoEngine_MKL_HEADERS} 
         DESTINATION include/chrono_mkl)

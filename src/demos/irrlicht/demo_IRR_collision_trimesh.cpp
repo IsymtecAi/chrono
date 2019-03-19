@@ -61,18 +61,24 @@ int main(int argc, char* argv[]) {
     // Create all the rigid bodies.
     // 
 
-    collision::ChCollisionModel::SetDefaultSuggestedEnvelope(0.0025);
-    collision::ChCollisionModel::SetDefaultSuggestedMargin(0.0025);
+	collision::ChCollisionModel::SetDefaultSuggestedEnvelope(0.0025);
+	collision::ChCollisionModel::SetDefaultSuggestedMargin(0.0025);
 
     // - Create a floor
+
+	// We could use a primitive box for the floor collision, doing simply
+       auto mfloor2 = std::make_shared<ChBodyEasyBox>(5, 2, 5, 1000, true, true);
+	// but here we rather use a mesh-based collision also for the floor, for 
+	// added difficulty in the benchmark. So we start from a basic ChBody and add collision
+	// and visualization stuff separately:
     
-    auto mfloor2 = std::make_shared<ChBody>();
+	//auto mfloor2 = std::make_shared<ChBody>();
     mfloor2->SetPos(ChVector<>(0, -1, 0));
     mfloor2->SetBodyFixed(true);
     mphysicalSystem.Add(mfloor2);
-
-    ChTriangleMeshConnected mmeshbox;
-    mmeshbox.LoadWavefrontMesh(GetChronoDataFile("cube.obj"),true,true);
+/*
+    auto mmeshbox = std::make_shared<ChTriangleMeshConnected>();
+    mmeshbox->LoadWavefrontMesh(GetChronoDataFile("cube.obj"),true,true);
 
     mfloor2->GetCollisionModel()->ClearModel();
     mfloor2->GetCollisionModel()->AddTriangleMesh(mmeshbox,false, false, VNULL, ChMatrix33<>(1), 0.005);
@@ -82,7 +88,7 @@ int main(int argc, char* argv[]) {
     auto masset_meshbox = std::make_shared<ChTriangleMeshShape>();
     masset_meshbox->SetMesh(mmeshbox);
     mfloor2->AddAsset(masset_meshbox);
-
+*/
     auto masset_texture = std::make_shared<ChTexture>();
     masset_texture->SetTextureFilename(GetChronoDataFile("concrete.jpg"));
     mfloor2->AddAsset(masset_texture);
@@ -108,19 +114,20 @@ int main(int argc, char* argv[]) {
 	// between 15 falling shapes; also we want to call RepairDuplicateVertexes() on the
 	// imported mesh; also we want to scale the imported mesh using Transform().
 
-    ChTriangleMeshConnected mmesh;
-    mmesh.LoadWavefrontMesh(GetChronoDataFile("shoe_view.obj"),false,true);
-    mmesh.Transform(ChVector<>(0,0,0), ChMatrix33<>(1.2)); // scale to a different size 
-    mmesh.RepairDuplicateVertexes(1e-9); // if meshes are not watertight
+    auto mmesh = std::make_shared<ChTriangleMeshConnected>();
+    mmesh->LoadWavefrontMesh(GetChronoDataFile("shoe_view.obj"), false, true);
+    mmesh->Transform(ChVector<>(0, 0, 0), ChMatrix33<>(1.2));  // scale to a different size
+    mmesh->RepairDuplicateVertexes(1e-9);                      // if meshes are not watertight
+
     // compute mass inertia from mesh
     double mmass;
-    ChVector<>mcog;
+    ChVector<> mcog;
     ChMatrix33<> minertia;
     double mdensity = 1000;
-    mmesh.ComputeMassProperties(true,mmass,mcog,minertia); 
+    mmesh->ComputeMassProperties(true, mmass, mcog, minertia);
     ChMatrix33<> principal_inertia_csys;
     double principal_I[3];
-    minertia.FastEigen(principal_inertia_csys, principal_I);       
+    minertia.FastEigen(principal_inertia_csys, principal_I);
 
     for (int j= 0; j<15;++j) {
 		

@@ -15,9 +15,6 @@
 // Chrono::Vehicle + ChronoParallel demo program for simulating a HMMWV vehicle
 // over rigid or granular material.
 //
-// The vehicle model uses the utility class ChWheeledVehicleAssembly and is
-// based on JSON specification files from the Chrono data directory.
-//
 // Contact uses the SMC (penalty) formulation.
 //
 // The global reference frame has Z up.
@@ -28,17 +25,17 @@
 #include <cmath>
 #include <vector>
 
-#include "chrono/core/ChFileutils.h"
 #include "chrono/utils/ChUtilsInputOutput.h"
 
 #include "chrono_vehicle/ChVehicleModelData.h"
 #include "chrono_vehicle/ChDriver.h"
 #include "chrono_vehicle/terrain/SCMDeformableTerrain.h"
 #include "chrono_vehicle/terrain/RigidTerrain.h"
-#include "chrono_vehicle/wheeled_vehicle/utils/ChWheeledVehicleAssembly.h"
 #include "chrono_vehicle/wheeled_vehicle/utils/ChWheeledVehicleIrrApp.h"
 
 #include "chrono_models/vehicle/hmmwv/HMMWV.h"
+
+#include "chrono_thirdparty/filesystem/path.h"
 
 using namespace chrono;
 using namespace chrono::collision;
@@ -177,8 +174,8 @@ void CreateLuggedGeometry(std::shared_ptr<ChBody> wheelBody) {
     coll_model->BuildModel();
 
     // Visualization
-    geometry::ChTriangleMeshConnected trimesh;
-    trimesh.LoadWavefrontMesh(vehicle::GetDataFile("hmmwv/lugged_wheel.obj"), false, false);
+    auto trimesh = std::make_shared<geometry::ChTriangleMeshConnected>();
+    trimesh->LoadWavefrontMesh(vehicle::GetDataFile("hmmwv/lugged_wheel.obj"), false, false);
 
     auto trimesh_shape = std::make_shared<ChTriangleMeshShape>();
     trimesh_shape->SetMesh(trimesh);
@@ -307,12 +304,12 @@ int main(int argc, char* argv[]) {
     // -----------------
     // Initialize output
     // -----------------
-    if (ChFileutils::MakeDirectory(out_dir.c_str()) < 0) {
+    if (!filesystem::create_directory(filesystem::path(out_dir))) {
         std::cout << "Error creating directory " << out_dir << std::endl;
         return 1;
     }
     if (img_output) {
-        if (ChFileutils::MakeDirectory(img_dir.c_str()) < 0) {
+        if (!filesystem::create_directory(filesystem::path(img_dir))) {
             std::cout << "Error creating directory " << img_dir << std::endl;
             return 1;
         }

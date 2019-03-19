@@ -29,7 +29,6 @@
 
 #include "chrono/ChConfig.h"
 #include "chrono/core/ChMathematics.h"
-#include "chrono/core/ChFileutils.h"
 #include "chrono/core/ChStream.h"
 #include "chrono/geometry/ChLineBezier.h"
 #include "chrono/utils/ChUtilsInputOutput.h"
@@ -47,6 +46,8 @@
 #ifdef CHRONO_OPENGL
 #include "chrono_opengl/ChOpenGLWindow.h"
 #endif
+
+#include "chrono_thirdparty/filesystem/path.h"
 
 using namespace chrono;
 using namespace chrono::collision;
@@ -78,7 +79,7 @@ bool moving_patch = true;
 double slope = 0;
 
 // Particle radius (mm)
-double radius = 20;
+double radius = 40;
 
 // Granular material density (kg/m3)
 double rho = 2000;
@@ -275,13 +276,13 @@ int main(int argc, char* argv[]) {
     std::string del("  ");
 
     if (output || povray) {
-        if (ChFileutils::MakeDirectory(out_dir.c_str()) < 0) {
+        if (!filesystem::create_directory(filesystem::path(out_dir))) {
             cout << "Error creating directory " << out_dir << endl;
             return 1;
         }
 
         if (povray) {
-            if (ChFileutils::MakeDirectory(pov_dir.c_str()) < 0) {
+            if (!filesystem::create_directory(filesystem::path(pov_dir))) {
                 std::cout << "Error creating directory " << pov_dir << std::endl;
                 return 1;
             }
@@ -506,10 +507,11 @@ int main(int argc, char* argv[]) {
             // Advance vehicle systems
             driver->Advance(time_step);
             hmmwv->Advance(time_step);
-        } else {
-            // Advance system state (no vehicle created yet)
-            system->DoStepDynamics(time_step);
         }
+
+        // Advance system state (no vehicle created yet)
+        system->DoStepDynamics(time_step);
+
 
 #ifdef CHRONO_OPENGL
         if (render) {
@@ -628,7 +630,7 @@ void TimingOutput(chrono::ChSystem* mSys, chrono::ChStreamOutAsciiFile* ofile) {
     double STEP = mSys->GetTimerStep();
     double BROD = mSys->GetTimerCollisionBroad();
     double NARR = mSys->GetTimerCollisionNarrow();
-    double SOLVER = mSys->GetTimerSolver();
+    double SOLVER = mSys->GetTimerAdvance();
     double UPDT = mSys->GetTimerUpdate();
     double RESID = 0;
     int REQ_ITS = 0;

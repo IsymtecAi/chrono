@@ -16,9 +16,10 @@
 //
 // =============================================================================
 
-#include "chrono/physics/ChSystemNSC.h"
 #include "chrono/physics/ChBodyEasy.h"
+#include "chrono/physics/ChLinkMotorRotationSpeed.h"
 #include "chrono/physics/ChLinkTrajectory.h"
+#include "chrono/physics/ChSystemNSC.h"
 
 #include "chrono_irrlicht/ChIrrApp.h"
 
@@ -85,7 +86,7 @@ int main(int argc, char* argv[]) {
     mcoin->GetCollisionModel()->SetSafeMargin(0.1);
     mcoin->SetCollide(true);
     mcoin->GetCollisionModel()->ClearModel();
-    mcoin->GetCollisionModel()->Add2Dpath(*mpathcoin.get(), VNULL, ChMatrix33<>(1), 0.03); // 0.03 thickness
+    mcoin->GetCollisionModel()->Add2Dpath(mpathcoin, VNULL, ChMatrix33<>(1), 0.03); // 0.03 thickness
     mcoin->GetCollisionModel()->BuildModel();
 
     // For visualization:create a ChLineShape, a visualization asset for lines.
@@ -117,7 +118,7 @@ int main(int argc, char* argv[]) {
     mcoin->GetCollisionModel()->SetSafeMargin(0.1);
     mhole->SetCollide(true);
     mhole->GetCollisionModel()->ClearModel();
-    mhole->GetCollisionModel()->Add2Dpath(*mpathhole.get(), VNULL, ChMatrix33<>(1), 0.03); // 0.01 thickness
+    mhole->GetCollisionModel()->Add2Dpath(mpathhole, VNULL, ChMatrix33<>(1), 0.03); // 0.01 thickness
     mhole->GetCollisionModel()->BuildModel();
 
     // Create a ChLineShape, a visualization asset for lines.
@@ -193,7 +194,7 @@ int main(int argc, char* argv[]) {
     mgenevawheel->GetCollisionModel()->SetSafeMargin(0.02);
     mgenevawheel->SetCollide(true);
     mgenevawheel->GetCollisionModel()->ClearModel();
-    mgenevawheel->GetCollisionModel()->Add2Dpath(*mpathwheel.get());
+    mgenevawheel->GetCollisionModel()->Add2Dpath(mpathwheel);
     mgenevawheel->GetCollisionModel()->BuildModel();
 
     // Create a ChLineShape, a visualization asset for lines.
@@ -230,8 +231,8 @@ int main(int argc, char* argv[]) {
     mcrank->GetCollisionModel()->SetSafeMargin(0.02);
     mcrank->SetCollide(true);
     mcrank->GetCollisionModel()->ClearModel();
-    mcrank->GetCollisionModel()->Add2Dpath(*mpathcrankpin.get());
-    mcrank->GetCollisionModel()->Add2Dpath(*mpathcrankstopper.get());
+    mcrank->GetCollisionModel()->Add2Dpath(mpathcrankpin);
+    mcrank->GetCollisionModel()->Add2Dpath(mpathcrankstopper);
     mcrank->GetCollisionModel()->BuildModel();
 
     // Create a ChLineShape, a visualization asset for lines.
@@ -242,15 +243,11 @@ int main(int argc, char* argv[]) {
     mcrankasset2->SetLineGeometry(mpathcrankstopper);
     mcrank->AddAsset(mcrankasset2);
 
-    // .. an engine between crank and truss
-    auto my_crankmotor = std::make_shared<ChLinkEngine>();
-    my_crankmotor->Initialize(mcrank, mfloor, ChCoordsys<>(crank_center));
-    my_crankmotor->Set_eng_mode(ChLinkEngine::ENG_MODE_SPEED);
-    if (auto mfun = std::dynamic_pointer_cast<ChFunction_Const>(my_crankmotor->Get_spe_funct()))
-        mfun->Set_yconst(CH_C_PI / 8.0);  
-    application.GetSystem()->AddLink(my_crankmotor);
-
-
+    // .. a motor between crank and truss
+    auto my_motor = std::make_shared<ChLinkMotorRotationSpeed>();
+    my_motor->Initialize(mcrank, mfloor, ChFrame<>(crank_center));
+    my_motor->SetSpeedFunction(std::make_shared<ChFunction_Const>(CH_C_PI / 8.0));
+    application.GetSystem()->AddLink(my_motor);
 
     // ==IMPORTANT!== Use this function for adding a ChIrrNodeAsset to all items
     // in the system. These ChIrrNodeAsset assets are 'proxies' to the Irrlicht meshes.

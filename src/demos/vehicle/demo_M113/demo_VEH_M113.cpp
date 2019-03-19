@@ -16,7 +16,6 @@
 //
 // =============================================================================
 
-#include "chrono/core/ChFileutils.h"
 #include "chrono/utils/ChUtilsInputOutput.h"
 
 #include "chrono_vehicle/ChVehicleModelData.h"
@@ -32,6 +31,8 @@
 #ifdef CHRONO_MKL
 #include "chrono_mkl/ChSolverMKL.h"
 #endif
+
+#include "chrono_thirdparty/filesystem/path.h"
 
 using namespace chrono;
 using namespace chrono::vehicle;
@@ -99,16 +100,25 @@ int main(int argc, char* argv[]) {
     // Construct the M113 vehicle
     // --------------------------
 
+    ChMaterialSurface::ContactMethod contact_method = ChMaterialSurface::SMC;
     ChassisCollisionType chassis_collision_type = ChassisCollisionType::NONE;
     TrackShoeType shoe_type = TrackShoeType::SINGLE_PIN;
-    M113_Vehicle vehicle(false, shoe_type, ChMaterialSurface::NSC, chassis_collision_type);
+
+    //// TODO
+    //// When using SMC, a double-pin shoe type requires MKL or MUMPS.  
+    //// However, there appear to still be redundant constraints in the double-pin assembly
+    //// resulting in solver failures with MKL and MUMPS (rank-deficient matrix).
+    if (shoe_type == TrackShoeType::DOUBLE_PIN)
+        contact_method = ChMaterialSurface::NSC;
+
+    M113_Vehicle vehicle(false, shoe_type, contact_method, chassis_collision_type);
 
     // ------------------------------
     // Solver and integrator settings
     // ------------------------------
 
     // Cannot use HHT + MKL with NSC contact
-    if (vehicle.GetSystem()->GetContactMethod() == ChMaterialSurface::NSC) {
+    if (contact_method == ChMaterialSurface::NSC) {
         use_mkl = false;
     }
 
@@ -257,13 +267,13 @@ int main(int argc, char* argv[]) {
     // Initialize output
     // -----------------
 
-    if (ChFileutils::MakeDirectory(out_dir.c_str()) < 0) {
+    if (!filesystem::create_directory(filesystem::path(out_dir))) {
         std::cout << "Error creating directory " << out_dir << std::endl;
         return 1;
     }
 
     if (povray_output) {
-        if (ChFileutils::MakeDirectory(pov_dir.c_str()) < 0) {
+        if (!filesystem::create_directory(filesystem::path(pov_dir))) {
             std::cout << "Error creating directory " << pov_dir << std::endl;
             return 1;
         }
@@ -271,7 +281,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (img_output) {
-        if (ChFileutils::MakeDirectory(img_dir.c_str()) < 0) {
+        if (!filesystem::create_directory(filesystem::path(img_dir))) {
             std::cout << "Error creating directory " << img_dir << std::endl;
             return 1;
         }

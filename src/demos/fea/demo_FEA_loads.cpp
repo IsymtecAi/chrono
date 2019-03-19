@@ -21,19 +21,19 @@
 #include "chrono/physics/ChSystemNSC.h"
 #include "chrono/solver/ChSolverMINRES.h"
 
-#include "chrono_fea/ChElementBar.h"
-#include "chrono_fea/ChElementBeamEuler.h"
-#include "chrono_fea/ChElementBrick.h"
-#include "chrono_fea/ChElementHexa_20.h"
-#include "chrono_fea/ChElementHexa_8.h"
-#include "chrono_fea/ChElementShellANCF.h"
-#include "chrono_fea/ChElementTetra_10.h"
-#include "chrono_fea/ChElementTetra_4.h"
-#include "chrono_fea/ChLinkDirFrame.h"
-#include "chrono_fea/ChLinkPointFrame.h"
-#include "chrono_fea/ChLinkPointFrame.h"
-#include "chrono_fea/ChLoadsBeam.h"
-#include "chrono_fea/ChMesh.h"
+#include "chrono/fea/ChElementBar.h"
+#include "chrono/fea/ChElementBeamEuler.h"
+#include "chrono/fea/ChElementBrick.h"
+#include "chrono/fea/ChElementHexa_20.h"
+#include "chrono/fea/ChElementHexa_8.h"
+#include "chrono/fea/ChElementShellANCF.h"
+#include "chrono/fea/ChElementTetra_10.h"
+#include "chrono/fea/ChElementTetra_4.h"
+#include "chrono/fea/ChLinkDirFrame.h"
+#include "chrono/fea/ChLinkPointFrame.h"
+#include "chrono/fea/ChLinkPointFrame.h"
+#include "chrono/fea/ChLoadsBeam.h"
+#include "chrono/fea/ChMesh.h"
 
 // Remember to use the namespace 'chrono' because all classes
 // of Chrono::Engine belong to this namespace and its children...
@@ -249,7 +249,7 @@ void test_1() {
         // As this is a stiff force field, dependency from state_x and state_y must be considered.
         virtual void ComputeQ(ChState* state_x,      ///< state position to evaluate Q
                               ChStateDelta* state_w  ///< state speed to evaluate Q
-                              ) {
+                              ) override {
             ChVector<> node_pos;
             ChVector<> node_vel;
             if (state_x && state_w) {
@@ -283,7 +283,7 @@ void test_1() {
                                      ChMatrix<>& mK,         ///< result dQ/dx
                                      ChMatrix<>& mR,         ///< result dQ/dv
                                      ChMatrix<>& mM          ///< result dQ/da
-                                     ) {
+                                     ) override {
             mK(0, 0) = 100;
             mK(1, 1) = 400;
             mR(0, 0) = 0.6;
@@ -291,7 +291,7 @@ void test_1() {
         }
 
         // Remember to set this as stiff, to enable the jacobians
-        virtual bool IsStiff() { return true; }
+        virtual bool IsStiff() override { return true; }
     };
 
     // Instance load object, applying to a node, as in previous example, and add to container:
@@ -329,7 +329,7 @@ void test_1() {
         // As this is a stiff force field, dependency from state_x and state_y must be considered.
         virtual void ComputeQ(ChState* state_x,      ///< state position to evaluate Q
                               ChStateDelta* state_w  ///< state speed to evaluate Q
-                              ) {
+                              ) override {
             ChVector<> Enode_pos;
             ChVector<> Enode_vel;
             ChVector<> Fnode_pos;
@@ -377,7 +377,7 @@ void test_1() {
         //   virtual void ComputeJacobian(...)
 
         // Remember to set this as stiff, to enable the jacobians
-        virtual bool IsStiff() { return true; }
+        virtual bool IsStiff() override { return true; }
     };
 
     // Instance load object. This require a list of ChLoadable objects

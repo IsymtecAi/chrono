@@ -99,6 +99,9 @@ void ChPovRay::AddAll() {
     for (auto body : mSystem->Get_bodylist()) {
         Add(body);
     }
+    for (auto& mesh : mSystem->Get_meshlist()) {
+        Add(mesh);
+    }
     for (auto ph : mSystem->Get_otherphysicslist()) {
         Add(ph);
     }
@@ -110,6 +113,9 @@ void ChPovRay::AddAll() {
 void ChPovRay::RemoveAll() {
     for (auto body : mSystem->Get_bodylist()) {
         Remove(body);
+    }
+    for (auto& mesh : mSystem->Get_meshlist()) {
+        Remove(mesh);
     }
     for (auto ph : mSystem->Get_otherphysicslist()) {
         Remove(ph);
@@ -152,6 +158,10 @@ void ChPovRay::SetupLists() {
     for (auto body : mSystem->Get_bodylist()) {
         if (IsAdded(body))
             mdata.push_back(body);
+    }
+    for (auto& mesh : mSystem->Get_meshlist()) {
+        if (IsAdded(mesh))
+            mdata.push_back(mesh);
     }
     for (auto ph : mSystem->Get_otherphysicslist()) {
         if (IsAdded(ph))
@@ -437,8 +447,8 @@ void ChPovRay::_recurseExportAssets(std::vector<std::shared_ptr<ChAsset> >& asse
             auto mytrimeshshapeasset = std::dynamic_pointer_cast<ChTriangleMeshShape>(k_asset);
 
             if (myobjshapeasset || mytrimeshshapeasset) {
-                ChTriangleMeshConnected* mytrimesh = 0;
-                ChTriangleMeshConnected* temp_allocated_loadtrimesh = 0;
+                ChTriangleMeshConnected* mytrimesh = nullptr;
+                ChTriangleMeshConnected* temp_allocated_loadtrimesh = nullptr;
 
                 if (myobjshapeasset) {
                     try {
@@ -461,7 +471,7 @@ void ChPovRay::_recurseExportAssets(std::vector<std::shared_ptr<ChAsset> >& asse
                 }
 
                 if (mytrimeshshapeasset) {
-                    mytrimesh = &mytrimeshshapeasset->GetMesh();
+                    mytrimesh = mytrimeshshapeasset->GetMesh().get();
                 }
 
                 // POV macro to build the asset - begin

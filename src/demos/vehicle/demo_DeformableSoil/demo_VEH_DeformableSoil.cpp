@@ -14,16 +14,19 @@
 //     - using the SCM semi-empirical model for deformable soil
 // =============================================================================
 
-#include "chrono/core/ChFileutils.h"
 #include "chrono/geometry/ChTriangleMeshConnected.h"
+#include "chrono/physics/ChLinkMotorRotationAngle.h"
 #include "chrono/physics/ChLoadContainer.h"
 #include "chrono/physics/ChSystemSMC.h"
 #include "chrono/solver/ChSolverMINRES.h"
 #include "chrono/utils/ChUtilsInputOutput.h"
 
 #include "chrono_irrlicht/ChIrrApp.h"
+
 #include "chrono_vehicle/ChVehicleModelData.h"
 #include "chrono_vehicle/terrain/SCMDeformableTerrain.h"
+
+#include "chrono_thirdparty/filesystem/path.h"
 
 using namespace chrono;
 using namespace chrono::irrlicht;
@@ -64,7 +67,7 @@ int main(int argc, char* argv[]) {
 
     // Initialize output
     if (output) {
-        if (ChFileutils::MakeDirectory(out_dir.c_str()) < 0) {
+        if (!filesystem::create_directory(filesystem::path(out_dir))) {
             std::cout << "Error creating directory " << out_dir << std::endl;
             return 1;
         }
@@ -81,12 +84,15 @@ int main(int argc, char* argv[]) {
     mrigidbody->SetInertiaXX(ChVector<>(20, 20, 20));
     mrigidbody->SetPos(tire_center + ChVector<>(0, 0.3, 0));
 
+    auto trimesh = std::make_shared<geometry::ChTriangleMeshConnected>();
+    trimesh->LoadWavefrontMesh(GetChronoDataFile("tractor_wheel.obj"));
+
     std::shared_ptr<ChTriangleMeshShape> mrigidmesh(new ChTriangleMeshShape);
-    mrigidmesh->GetMesh().LoadWavefrontMesh(GetChronoDataFile("tractor_wheel.obj"));
+    mrigidmesh->SetMesh(trimesh);
     mrigidbody->AddAsset(mrigidmesh);
 
     mrigidbody->GetCollisionModel()->ClearModel();
-    mrigidbody->GetCollisionModel()->AddTriangleMesh(mrigidmesh->GetMesh(), false, false, VNULL, ChMatrix33<>(1), 0.01);
+    mrigidbody->GetCollisionModel()->AddTriangleMesh(trimesh, false, false, VNULL, ChMatrix33<>(1), 0.01);
     mrigidbody->GetCollisionModel()->BuildModel();
     mrigidbody->SetCollide(true);
 
@@ -94,12 +100,11 @@ int main(int argc, char* argv[]) {
     mcol->SetColor(ChColor(0.3f, 0.3f, 0.3f));
     mrigidbody->AddAsset(mcol);
 
-    std::shared_ptr<ChLinkEngine> myengine(new ChLinkEngine);
-    myengine->Set_shaft_mode(ChLinkEngine::ENG_SHAFT_OLDHAM);
-    myengine->Set_eng_mode(ChLinkEngine::ENG_MODE_ROTATION);
-    myengine->Set_rot_funct(std::make_shared<ChFunction_Ramp>(0, CH_C_PI / 4.0));  // phase, speed
-    myengine->Initialize(mrigidbody, mtruss, ChCoordsys<>(tire_center, Q_from_AngAxis(CH_C_PI_2, VECT_Y)));
-    my_system.Add(myengine);
+    auto motor = std::make_shared<ChLinkMotorRotationAngle>();
+    motor->SetSpindleConstraint(ChLinkMotorRotation::SpindleConstraint::OLDHAM);
+    motor->SetAngleFunction(std::make_shared<ChFunction_Ramp>(0, CH_C_PI / 4.0));
+    motor->Initialize(mrigidbody, mtruss, ChFrame<>(tire_center, Q_from_AngAxis(CH_C_PI_2, VECT_Y)));
+    my_system.Add(motor);
 
     //
     // THE DEFORMABLE TERRAIN
